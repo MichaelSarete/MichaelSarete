@@ -1,0 +1,96 @@
+# ================================
+# WN11-AU-000050 Remediation Script
+# ================================
+
+ <#
+.SYNOPSIS
+    This PowerShell script enforces auditing of successful process creation events so the system logs every time a program or process is started for security monitoring and forensic visibility.
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-16-2026
+    Last Modified   : 04-16-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-AU-000050
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+#>
+
+# Ensure script is running as Administrator
+If (-NOT ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+    Write-Host "❌ Please run this script as Administrator." -ForegroundColor Red
+    Exit 1
+}
+
+Write-Host "🔧 Starting remediation for WN11-AU-000050..." -ForegroundColor Cyan
+
+# -------------------------------
+# Step 1: Enable prerequisite policy
+# -------------------------------
+Write-Host "`n[1/3] Enabling advanced audit policy enforcement..." -ForegroundColor Yellow
+
+try {
+    reg add "HKLM\System\CurrentControlSet\Control\Lsa" `
+        /v SCENoApplyLegacyAuditPolicy `
+        /t REG_DWORD `
+        /d 1 `
+        /f | Out-Null
+
+    Write-Host "✅ Prerequisite policy enabled." -ForegroundColor Green
+}
+catch {
+    Write-Host "❌ Failed to set prerequisite policy." -ForegroundColor Red
+    Exit 1
+}
+
+# -------------------------------
+# Step 2: Configure audit policy
+# -------------------------------
+Write-Host "`n[2/3] Enabling Process Creation auditing (Success)..." -ForegroundColor Yellow
+
+try {
+    auditpol /set /subcategory:"Process Creation" /success:enable | Out-Null
+    Write-Host "✅ Audit policy command executed." -ForegroundColor Green
+}
+catch {
+    Write-Host "❌ Failed to configure audit policy." -ForegroundColor Red
+    Exit 1
+}
+
+# -------------------------------
+# Step 3: Verify configuration
+# -------------------------------
+Write-Host "`n[3/3] Verifying configuration..." -ForegroundColor Yellow
+
+$auditOutput = auditpol /get /subcategory:"Process Creation"
+
+Write-Host "`n--- AuditPol Output ---"
+Write-Output $auditOutput
+Write-Host "------------------------`n"
+
+# More reliable validation
+if ($auditOutput -like "*Success*")
+{
+    Write-Host "✅ SUCCESS: WN11-AU-000050 is COMPLIANT." -ForegroundColor Green
+}
+else
+{
+    Write-Host "❌ ERROR: WN11-AU-000050 is NOT compliant." -ForegroundColor Red
+
+    Write-Host "`n⚠️ Troubleshooting tips:" -ForegroundColor Yellow
+    Write-Host "- Run 'gpupdate /force'"
+    Write-Host "- Check if domain GPO is overriding settings"
+    Write-Host "- Reboot the system if needed"
+}
