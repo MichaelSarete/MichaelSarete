@@ -1,0 +1,55 @@
+# ================================
+# WN11-CC-000110 Remediation Script
+# ================================
+
+ <#
+.SYNOPSIS
+    This PowerShell script disable printing over HTTP to prevent data from being transmitted over web protocols, reducing the risk of data leakage and unauthorized external communication.
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-17-2026
+    Last Modified   : 04-17-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000110
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+#>
+
+# Define registry path and value
+$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers"
+$valueName = "DisableHTTPPrinting"
+$desiredValue = 1
+
+# Create the registry path if it does not exist
+if (!(Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+# Set the registry value
+New-ItemProperty -Path $regPath `
+    -Name $valueName `
+    -Value $desiredValue `
+    -PropertyType DWORD `
+    -Force | Out-Null
+
+# Verify the setting
+$currentValue = Get-ItemProperty -Path $regPath -Name $valueName -ErrorAction SilentlyContinue
+
+if ($currentValue.$valueName -eq $desiredValue) {
+    Write-Output "SUCCESS: HTTP Printing has been disabled (WN11-CC-000110 compliant)."
+} else {
+    Write-Output "ERROR: Failed to set DisableHTTPPrinting."
+}
+
+# Force Group Policy update (optional but recommended)
+gpupdate /force
