@@ -1,0 +1,99 @@
+# ============================================
+# WN11-CC-000345 Remediation Script
+# Disable WinRM Basic Authentication
+# ============================================
+
+<#
+.SYNOPSIS
+    Disables Basic Authentication for WinRM Service to meet STIG WN11-CC-000345.
+
+.DESCRIPTION
+    This script ensures that Basic Authentication is disabled for the WinRM service
+    by configuring both:
+      - WinRM service configuration
+      - Registry (for persistence / GPO alignment)
+
+    It also verifies the configuration after applying.
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-21-2026
+    Last Modified   : 04-21-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000345
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+#>
+
+Write-Host "===== WN11-CC-000345 Remediation Started =====" -ForegroundColor Cyan
+
+# Ensure script is running as Administrator
+if (-NOT ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+
+    Write-Host "ERROR: Run this script as Administrator." -ForegroundColor Red
+    exit 1
+}
+
+# --------------------------------------------
+# 1. Disable Basic Authentication via WinRM
+# --------------------------------------------
+Write-Host "[*] Disabling WinRM Basic Authentication..." -ForegroundColor Yellow
+
+winrm set winrm/config/service/auth '@{Basic="false"}' | Out-Null
+
+# --------------------------------------------
+# 2. Enforce via Registry (STIG compliance)
+# --------------------------------------------
+Write-Host "[*] Setting registry key for persistence..." -ForegroundColor Yellow
+
+$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service"
+
+# Create path if it doesn't exist
+if (-not (Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+# Set Basic Authentication to Disabled (0)
+New-ItemProperty -Path $regPath -Name "AllowBasic" -Value 0 -PropertyType DWord -Force | Out-Null
+
+# --------------------------------------------
+# 3. Restart WinRM service to apply changes
+# --------------------------------------------
+Write-Host "[*] Restarting WinRM service..." -ForegroundColor Yellow
+
+Restart-Service -Name WinRM -Force
+
+# --------------------------------------------
+# 4. Verification
+# --------------------------------------------
+Write-Host "[*] Verifying configuration..." -ForegroundColor Yellow
+
+$winrmConfig = winrm get winrm/config/service/auth | Select-String "Basic"
+$regValue = Get-ItemProperty -Path $regPath -Name "AllowBasic" -ErrorAction SilentlyContinue
+
+Write-Host "`n===== Verification Results =====" -ForegroundColor Cyan
+
+if ($winrmConfig -match "false") {
+    Write-Host "WinRM Basic Auth: DISABLED ✅" -ForegroundColor Green
+} else {
+    Write-Host "WinRM Basic Auth: NOT DISABLED ❌" -ForegroundColor Red
+}
+
+if ($regValue.AllowBasic -eq 0) {
+    Write-Host "Registry Setting: COMPLIANT ✅" -ForegroundColor Green
+} else {
+    Write-Host "Registry Setting: NOT COMPLIANT ❌" -ForegroundColor Red
+}
+
+Write-Host "`n===== Remediation Complete =====" -ForegroundColor Cyan
