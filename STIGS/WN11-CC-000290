@@ -1,0 +1,83 @@
+# ============================================
+# WN11-CC-000290 Remediation Script (Nessus Mapping)
+# Enforce RDP Encryption Level = High
+# ============================================
+
+<#
+.SYNOPSIS
+    Configures Remote Desktop Services encryption level to High (128-bit)
+
+.DESCRIPTION
+    This script sets the required registry key for RDP encryption level
+    to comply with Nessus/STIG WN11-CC-000290.
+
+    It ensures persistence and verifies the configuration.
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-21-2026
+    Last Modified   : 04-21-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000290
+
+#>
+
+Write-Host "===== WN11-CC-000290 (RDP Encryption) Remediation Started =====" -ForegroundColor Cyan
+
+# Ensure admin
+if (-NOT ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+
+    Write-Host "ERROR: Run as Administrator." -ForegroundColor Red
+    exit 1
+}
+
+# Registry path
+$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+
+# Create path if missing
+if (-not (Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+# --------------------------------------------
+# Set Encryption Level = High (3)
+# --------------------------------------------
+Write-Host "[*] Setting RDP Encryption Level to HIGH..." -ForegroundColor Yellow
+
+New-ItemProperty -Path $regPath `
+    -Name "MinEncryptionLevel" `
+    -Value 3 `
+    -PropertyType DWord `
+    -Force | Out-Null
+
+# --------------------------------------------
+# Restart Remote Desktop Services
+# --------------------------------------------
+Write-Host "[*] Restarting Remote Desktop Services..." -ForegroundColor Yellow
+
+Restart-Service -Name TermService -Force
+
+# --------------------------------------------
+# Verification
+# --------------------------------------------
+Write-Host "[*] Verifying configuration..." -ForegroundColor Yellow
+
+$value = (Get-ItemProperty -Path $regPath -Name "MinEncryptionLevel").MinEncryptionLevel
+
+Write-Host "`n===== Verification Results =====" -ForegroundColor Cyan
+
+switch ($value) {
+    1 { Write-Host "Encryption Level: LOW ❌" -ForegroundColor Red }
+    2 { Write-Host "Encryption Level: CLIENT COMPATIBLE ❌" -ForegroundColor Red }
+    3 { Write-Host "Encryption Level: HIGH (COMPLIANT) ✅" -ForegroundColor Green }
+    4 { Write-Host "Encryption Level: FIPS (COMPLIANT if required) ✅" -ForegroundColor Green }
+    default { Write-Host "Encryption Level: UNKNOWN ❌" -ForegroundColor Red }
+}
+
+Write-Host "`n===== Remediation Complete =====" -ForegroundColor Cyan
