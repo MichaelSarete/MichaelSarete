@@ -1,0 +1,73 @@
+# ============================================
+# WN11-SO-000190 Remediation (Nessus Mapping)
+# Disable DES/RC4, Enable AES Kerberos Encryption
+# ============================================
+
+<#
+.SYNOPSIS
+requires configuring Kerberos encryption to disable weak algorithms (DES and RC4) and enforce the use of strong encryption (AES) to protect authentication tickets and prevent credential compromise.
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-21-2026
+    Last Modified   : 04-21-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-SO-000190
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+
+#>
+
+
+Write-Host "===== WN11-SO-000190 Remediation Started =====" -ForegroundColor Cyan
+
+# Ensure admin
+if (-NOT ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+
+    Write-Host "ERROR: Run as Administrator." -ForegroundColor Red
+    exit 1
+}
+
+$regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Kerberos\Parameters"
+
+# Create path if missing
+if (-not (Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+Write-Host "[*] Configuring Kerberos encryption types..." -ForegroundColor Yellow
+
+# Set secure encryption types (disable DES/RC4)
+New-ItemProperty -Path $regPath `
+    -Name "SupportedEncryptionTypes" `
+    -Value 0x7FFFFFF8 `
+    -PropertyType DWord `
+    -Force | Out-Null
+
+# --------------------------------------------
+# Verification
+# --------------------------------------------
+Write-Host "[*] Verifying configuration..." -ForegroundColor Yellow
+
+$value = (Get-ItemProperty -Path $regPath -Name "SupportedEncryptionTypes").SupportedEncryptionTypes
+
+Write-Host "`n===== Verification Results =====" -ForegroundColor Cyan
+
+if ($value -eq 0x7FFFFFF8) {
+    Write-Host "Kerberos Encryption: SECURE (AES Only) ✅" -ForegroundColor Green
+} else {
+    Write-Host "Kerberos Encryption: NOT COMPLIANT ❌" -ForegroundColor Red
+}
+
+Write-Host "`n===== Remediation Complete =====" -ForegroundColor Cyan
