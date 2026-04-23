@@ -1,0 +1,41 @@
+# ================================
+# WN11-CC-000197 Remediation Script
+# ================================
+
+<##
+
+.SYNOPSIS
+Disables Microsoft consumer experiences to prevent automatic installation of non-enterprise apps and reduce unnecessary system exposure.
+
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-22-2026
+    Last Modified   : 04-22-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000197
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+#>
+
+$regPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+$regName = "DisableWindowsConsumerFeatures"
+
+# Create registry path if it doesn't exist
+If (!(Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+# Enable policy (1 = Turn off Microsoft consumer experiences)
+Set-ItemProperty -Path $regPath -Name $regName -Value 1 -Type DWord
+
+Write-Output "WN11-CC-000197 remediated: Microsoft consumer experiences disabled."
