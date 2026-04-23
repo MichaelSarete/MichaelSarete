@@ -1,0 +1,40 @@
+# ================================
+# WN11-CC-000170 Remediation Script
+# ================================
+<##
+
+.SYNOPSIS
+Allows modern applications to function without requiring a Microsoft account, ensuring systems can operate in controlled or offline enterprise environments.
+
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-22-2026
+    Last Modified   : 04-22-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000170
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+#>
+
+$regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+$regName = "MSAOptional"
+
+# Create path if it doesn't exist
+If (!(Test-Path $regPath)) {
+    New-Item -Path $regPath -Force | Out-Null
+}
+
+# Enable setting (1 = Microsoft accounts are optional)
+Set-ItemProperty -Path $regPath -Name $regName -Value 1 -Type DWord
+
+Write-Output "WN11-CC-000170 remediated: Microsoft accounts set to optional."
