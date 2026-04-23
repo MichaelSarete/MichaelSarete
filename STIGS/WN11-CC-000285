@@ -1,0 +1,66 @@
+# ============================================
+# WN11-CC-000285 Remediation Script
+# Require Secure RPC Communication for RDS
+# ============================================
+
+<#
+.SYNOPSIS
+    Enforces secure RPC communication for Remote Desktop Session Host (RDS).
+
+.DESCRIPTION
+    This script configures the system to require secure RPC communication
+    for Remote Desktop Services by setting the appropriate registry value.
+
+    This aligns with DISA STIG WN11-CC-000285 and Nessus audit checks.
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-22-2026
+    Last Modified   : 04-22-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-CC-000285
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+#>
+
+# Registry path and key
+$RegPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+$RegName = "fEncryptRPCTraffic"
+$DesiredValue = 1
+
+try {
+    # Ensure registry path exists
+    if (!(Test-Path $RegPath)) {
+        New-Item -Path $RegPath -Force | Out-Null
+        Write-Output "[+] Created registry path: $RegPath"
+    }
+
+    # Set the required value
+    Set-ItemProperty -Path $RegPath -Name $RegName -Value $DesiredValue -Type DWord
+
+    Write-Output "[+] Successfully set $RegName to $DesiredValue (Secure RPC Enabled)"
+
+    # Verify the setting
+    $CurrentValue = (Get-ItemProperty -Path $RegPath -Name $RegName).$RegName
+
+    if ($CurrentValue -eq $DesiredValue) {
+        Write-Output "[✓] Verification Passed: Secure RPC is enforced."
+    } else {
+        Write-Output "[!] Verification Failed: Value is not set correctly."
+    }
+
+} catch {
+    Write-Output "[X] Error occurred: $_"
+}
+
+# Optional: Force Group Policy update
+gpupdate /force | Out-Null
+Write-Output "[+] Group Policy updated. A reboot may be required for full compliance."
