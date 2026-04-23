@@ -1,0 +1,61 @@
+# ================================
+# WN11-UR-000160 Remediation Script
+# ================================
+
+<#
+
+.SYNOPSIS
+Ensures only administrators can restore files and directories, preventing unauthorized users from bypassing file permissions and modifying sensitive system data.
+
+
+.NOTES
+    Author          : Michael Sarete
+    LinkedIn        : https://www.linkedin.com/in/michael-sarete-b16857101/
+    GitHub          : github.com/MichaelSarete
+    Date Created    : 04-21-2026
+    Last Modified   : 04-21-2026
+    Version         : 1.0
+    CVEs            : N/A
+    Plugin IDs      : N/A
+    STIG-ID         : WN11-UR-000160
+
+.TESTED ON
+    Date(s) Tested  : 
+    Tested By       : 
+    Systems Tested  : 
+    PowerShell Ver. : 
+
+#>
+
+
+# Define temp file
+$infPath = "$env:TEMP\secpol.inf"
+$dbPath = "$env:TEMP\secpol.sdb"
+
+# Export current security policy
+secedit /export /cfg $infPath
+
+# Read file
+$content = Get-Content $infPath
+
+# Define correct value (Administrators SID)
+$correctValue = "SeRestorePrivilege = *S-1-5-32-544"
+
+# Replace or add the setting
+if ($content -match "SeRestorePrivilege") {
+    $content = $content -replace "SeRestorePrivilege\s*=.*", $correctValue
+} else {
+    $content += $correctValue
+}
+
+# Save updated config
+$content | Set-Content $infPath
+
+# Apply new policy
+secedit /configure /db $dbPath /cfg $infPath /areas USER_RIGHTS
+
+# Cleanup
+Remove-Item $infPath -Force
+Remove-Item $dbPath -Force
+
+Write-Output "WN11-UR-000160 remediated: Only Administrators have Restore files and directories privilege."
